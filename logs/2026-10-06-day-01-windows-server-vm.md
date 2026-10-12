@@ -1,6 +1,6 @@
 # Day 1: Windows Server 2025 VM on Hyper-V
 
-**Date:** 2026-10-07
+**Date:** 2026-10-06
 **Hardware:** Dell Latitude 5440 (Intel Core i5), Windows 11 Pro
 **Goal:** Get Windows Server running in a VM so I can build an Active Directory lab.
 
