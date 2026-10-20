@@ -30,8 +30,12 @@ lab.internal
 
 ## Security and risk
 
-- **[Risk Register](RISK-REGISTER.md):** 19 risks scored by likelihood and impact, mapped to NIST SP 800-171 (CMMC L2), CIS Controls v8 and NIST CSF, each with a treatment decision and status
+- **[Risk Register](RISK-REGISTER.md):** 21 risks scored by likelihood and impact, mapped to NIST SP 800-171 (CMMC L2), CIS Controls v8 and NIST CSF, each with a treatment decision and status
 - **[Identity and Access](IDENTITY-AND-ACCESS.md):** account and group inventory, privileged access, tested sign-in rights, joiner/mover/leaver procedure and access review log
+
+## Known issues
+
+- **DC01 not reachable on LDAP from WS01 or the host** (since 2026-10-19). Troubleshooting in [Day 5](logs/2026-10-19-day-05-account-lockout-policy.md), tracked as R-021.
 
 ## Built so far
 
@@ -43,6 +47,7 @@ lab.internal
 - [x] Verified least privilege (standard users can't sign in to the DC)
 - [x] Windows 11 client joined to the domain, regular user sign-in verified
 - [x] Risk register and identity and access documentation
+- [x] Account lockout policy: 5 attempts / 15 minutes (end-to-end test pending)
 
 ## Roadmap
 
@@ -65,6 +70,7 @@ lab.internal
 | 2 | 2026-10-12 | [Lab network and first domain controller](logs/2026-10-12-day-02-lab-network-and-domain-controller.md) |
 | 3 | 2026-10-13 | [DNS forwarder, OUs, users and groups](logs/2026-10-13-day-03-ous-users-and-groups.md) |
 | 4 | 2026-10-14 | [Windows 11 client joined to the domain](logs/2026-10-14-day-04-windows-11-client-domain-join.md) |
+| 5 | 2026-10-19 | [Account lockout policy (and a DC that stopped answering)](logs/2026-10-19-day-05-account-lockout-policy.md) |
 
 ## Repo layout
 

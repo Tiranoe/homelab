@@ -2,7 +2,7 @@
 
 Who has access to what in lab.internal, how access is granted and removed, and the results of access reviews. Related risks are in the [Risk Register](RISK-REGISTER.md).
 
-**Last reviewed:** 2026-10-14
+**Last reviewed:** 2026-10-19
 
 ## Account inventory
 
@@ -15,7 +15,7 @@ Who has access to what in lab.internal, how access is granted and removed, and t
 | bob.roberts | Standard user | LAB/Users | GG-Finance | Test user (Finance) | Enabled | 2026-10-13 |
 | krbtgt | Built-in service | lab.internal/Users | n/a | Signs Kerberos tickets | Disabled (by design) | 2026-10-12 |
 | Guest | Built-in | lab.internal/Users | Domain Guests | Not used | Disabled (by default) | 2026-10-12 |
-| WS01\localadmin | Local admin | WS01 only | WS01\Administrators | Initial setup of WS01 | Enabled (R-015) | 2026-10-14 |
+| WS01\localadmin | Local admin | WS01 only | WS01\Administrators | Initial setup of WS01 | Enabled; password lost 2026-10-19 (R-002, R-015) | 2026-10-14 |
 
 **Not an AD account:** the DSRM password is a separate local recovery login on DC01, used only to boot into Directory Services Restore Mode (R-002).
 
@@ -44,11 +44,28 @@ Who has access to what in lab.internal, how access is granted and removed, and t
 - **Least privilege:** standard users get no admin rights anywhere
 - **Built-in Administrator** is for break-glass use only (R-008, in progress)
 
+## Authentication policy
+
+| Setting | Value | Where | Since |
+|---|---|---|---|
+| Account lockout threshold | 5 invalid attempts | Default Domain Policy | 2026-10-19 (was 0) |
+| Account lockout duration | 15 minutes | Default Domain Policy | 2026-10-19 |
+| Reset lockout counter after | 15 minutes | Default Domain Policy | 2026-10-19 |
+| Allow Administrator account lockout | Enabled | Default Domain Policy | Default, confirmed 2026-10-19 |
+| Cached domain logons | Windows default | WS01 | Allows offline sign-in; see R-020 |
+
+```powershell
+Get-ADDefaultDomainPasswordPolicy | Select-Object LockoutThreshold, LockoutDuration, LockoutObservationWindow
+Get-ADUser <name> -Properties BadLogonCount, LockedOut | Select-Object BadLogonCount, LockedOut
+Search-ADAccount -LockedOut | Select-Object SamAccountName
+Unlock-ADAccount -Identity <name>
+```
+
 ## Sign-in rights (tested)
 
 | Account | DC01 local sign-in | WS01 local sign-in | WS01 via Remote Desktop |
 |---|---|---|---|
-| john.nam (standard) | **Blocked** (tested Day 3) | **Allowed** (tested Day 4) | **Blocked** (seen Day 4) |
+| john.nam (standard) | **Blocked** (tested Day 3) | **Allowed** (tested Day 4) | **Blocked** (seen Day 4, Day 5) |
 | john.nam.admin | Allowed (Domain Admin) | Allowed (Domain Admin) | Allowed (Domain Admin) |
 
 - DC01 is protected by **"Allow log on locally"** in the Default Domain Controllers Policy, which is limited to admin-type groups.
@@ -100,3 +117,4 @@ Search-ADAccount -AccountInactive -TimeSpan 30.00:00:00 -UsersOnly | Select-Obje
 | Date | Scope | Findings | Actions |
 |---|---|---|---|
 | 2026-10-14 | Domain, Enterprise and Schema Admins; all lab accounts | Domain Admins = Administrator, john.nam.admin. Enterprise Admins and Schema Admins = Administrator only. All appropriate. Built-in Administrator still used for admin work. WS01 has a static local admin password. | Opened R-008 and R-015; next review 2026-11-14 |
+| 2026-10-19 | Authentication policy, lab credentials | Lockout policy was threshold 0. WS01 localadmin password lost. Cached logons hide failed attempts from the DC. | Lockout set to 5/15/15 (R-017); R-002 raised; opened R-020 |
