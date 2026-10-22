@@ -2,7 +2,7 @@
 
 Who has access to what in lab.internal, how access is granted and removed, and the results of access reviews. Related risks are in the [Risk Register](RISK-REGISTER.md).
 
-**Last reviewed:** 2026-10-19
+**Last reviewed:** 2026-10-22
 
 ## Account inventory
 
@@ -11,8 +11,8 @@ Who has access to what in lab.internal, how access is granted and removed, and t
 | Administrator | Built-in, privileged | lab.internal/Users | Domain Admins, Enterprise Admins, Schema Admins, Administrators | Forest creation and break-glass | Enabled (R-008) | 2026-10-12 |
 | john.nam.admin | Named admin | LAB/Admins | Domain Admins | My admin work | Enabled | 2026-10-13 |
 | john.nam | Standard user | LAB/Users | GG-IT | My everyday account | Enabled | 2026-10-13 |
-| alice.wonderland | Standard user | LAB/Users | GG-HR | Test user (HR) | Enabled | 2026-10-13 |
-| bob.roberts | Standard user | LAB/Users | GG-Finance | Test user (Finance) | Enabled | 2026-10-13 |
+| alice.wonderland | Standard user | LAB/Users | GG-HR | Test user (HR) | Enabled; must-change-password off (R-010) | 2026-10-13 |
+| bob.roberts | Standard user | LAB/Users | GG-Finance | Test user (Finance) | Enabled; lockout-tested 2026-10-22; must-change-password off (R-010) | 2026-10-13 |
 | krbtgt | Built-in service | lab.internal/Users | n/a | Signs Kerberos tickets | Disabled (by design) | 2026-10-12 |
 | Guest | Built-in | lab.internal/Users | Domain Guests | Not used | Disabled (by default) | 2026-10-12 |
 | WS01\localadmin | Local admin | WS01 only | WS01\Administrators | Initial setup of WS01 | Enabled; password lost 2026-10-19 (R-002, R-015) | 2026-10-14 |
@@ -48,7 +48,7 @@ Who has access to what in lab.internal, how access is granted and removed, and t
 
 | Setting | Value | Where | Since |
 |---|---|---|---|
-| Account lockout threshold | 5 invalid attempts | Default Domain Policy | 2026-10-19 (was 0) |
+| Account lockout threshold | 5 invalid attempts | Default Domain Policy | 2026-10-19 (was 0); tested 2026-10-22 |
 | Account lockout duration | 15 minutes | Default Domain Policy | 2026-10-19 |
 | Reset lockout counter after | 15 minutes | Default Domain Policy | 2026-10-19 |
 | Allow Administrator account lockout | Enabled | Default Domain Policy | Default, confirmed 2026-10-19 |
@@ -66,10 +66,29 @@ Unlock-ADAccount -Identity <name>
 | Account | DC01 local sign-in | WS01 local sign-in | WS01 via Remote Desktop |
 |---|---|---|---|
 | john.nam (standard) | **Blocked** (tested Day 3) | **Allowed** (tested Day 4) | **Blocked** (seen Day 4, Day 5) |
+| bob.roberts (locked out) | n/a | **Blocked**, even with correct password (tested Day 6) | n/a |
 | john.nam.admin | Allowed (Domain Admin) | Allowed (Domain Admin) | Allowed (Domain Admin) |
 
 - DC01 is protected by **"Allow log on locally"** in the Default Domain Controllers Policy, which is limited to admin-type groups.
 - Remote access to WS01 requires **"Allow log on through Remote Desktop Services"** (Remote Desktop Users group), which standard users don't have.
+
+## Account lockout handling (help desk)
+
+1. **Verify the caller's identity** before doing anything
+2. **Confirm the lockout** and see how many bad attempts reached the DC:
+   ```powershell
+   Get-ADUser <name> -Properties BadLogonCount, LockedOut, LastBadPasswordAttempt | Select-Object BadLogonCount, LockedOut, LastBadPasswordAttempt
+   ```
+3. **Check where it came from** (Event 4740 on the DC names the source computer):
+   ```powershell
+   Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4740} -MaxEvents 5 | Format-List TimeCreated, Message
+   ```
+   An unfamiliar source computer could mean password guessing, so escalate it instead of just unlocking.
+4. **Unlock**
+   - Manual: ADUC > user > Properties > **Account** tab > **Unlock account** > OK
+   - PowerShell: `Unlock-ADAccount -Identity <name>`
+5. If the user forgot their password, **reset it** with "User must change password at next logon" checked
+6. Without an admin unlock, the account unlocks on its own after 15 minutes
 
 ## Joiner / Mover / Leaver procedure
 
@@ -118,3 +137,4 @@ Search-ADAccount -AccountInactive -TimeSpan 30.00:00:00 -UsersOnly | Select-Obje
 |---|---|---|---|
 | 2026-10-14 | Domain, Enterprise and Schema Admins; all lab accounts | Domain Admins = Administrator, john.nam.admin. Enterprise Admins and Schema Admins = Administrator only. All appropriate. Built-in Administrator still used for admin work. WS01 has a static local admin password. | Opened R-008 and R-015; next review 2026-11-14 |
 | 2026-10-19 | Authentication policy, lab credentials | Lockout policy was threshold 0. WS01 localadmin password lost. Cached logons hide failed attempts from the DC. | Lockout set to 5/15/15 (R-017); R-002 raised; opened R-020 |
+| 2026-10-22 | Lockout behavior, user account settings | Lockout works end to end. bob.roberts had "must change password" on, which didn't match R-010. | Closed R-017; turned off must-change for bob.roberts and alice.wonderland to match accepted R-010; added lockout handling procedure |

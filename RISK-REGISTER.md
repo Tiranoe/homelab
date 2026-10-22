@@ -2,7 +2,7 @@
 
 Risks I've identified while building the lab, how I scored them, what controls they map to, and what I'm doing about each one. Every daily log feeds this register.
 
-**Last reviewed:** 2026-10-19 (after Day 5)
+**Last reviewed:** 2026-10-22 (after Day 6)
 
 ## Method
 
@@ -31,12 +31,12 @@ Risks I've identified while building the lab, how I scored them, what controls t
 
 | Rating | Total | Open / In progress | Mitigated / Closed | Accepted |
 |---|---|---|---|---|
-| High | 11 | 6 | 4 | 1 |
-| Medium | 6 | 3 | 0 | 3 |
+| High | 12 | 5 | 5 | 2 |
+| Medium | 7 | 2 | 2 | 3 |
 | Low | 4 | 1 | 1 | 2 |
-| **Total** | **21** | **10** | **5** | **6** |
+| **Total** | **23** | **8** | **8** | **7** |
 
-**Top priorities:** R-021 (DC01 unreachable), R-002 (passwords not in a password manager; already caused lost credentials), R-015 (static local admin password), R-018 (no audit logging).
+**Top priorities:** R-002 (passwords not in a password manager; already caused lost credentials), R-015 (static local admin password), R-018 (no audit logging or alerting), R-008 (built-in Administrator).
 
 ## Register
 
@@ -51,18 +51,20 @@ Risks I've identified while building the lab, how I scored them, what controls t
 | R-007 | Hyper-V checkpoints are the only recovery method for DC01; not real AD backups, and rolling back a DC is unsafe with multiple DCs | Day 2 | 2 | 2 | Medium (4) | 800-53 CP-9, CP-10 | Mitigate | Open | Set up Windows Server Backup system-state backups |
 | R-008 | Built-in Administrator account still used: well-known target, no individual accountability | Day 3 | 2 | 3 | **High (6)** | 3.3.2, 3.5.1; CIS 4.7, 5.4 | Mitigate | In progress | Use john.nam.admin only; long unique vaulted password; monitor sign-ins. Day 5: "Allow Administrator account lockout" confirmed enabled |
 | R-009 | Domain Admins membership grows over time (privilege creep) | Day 3 | 2 | 3 | **High (6)** | 3.1.5, 3.1.7; CIS 5.4 | Mitigate | Mitigated (ongoing) | Monthly membership review (see [Identity and Access](IDENTITY-AND-ACCESS.md)) |
-| R-010 | Lab users created without "must change password at next logon," so the admin knows user passwords | Day 3 | 2 | 2 | Medium (4) | 3.5.9 | Accept | Accepted | Lab convenience only; onboarding procedure enforces it for real accounts |
+| R-010 | Lab users without "must change password at next logon," so the admin knows user passwords | Day 3, 6 | 2 | 2 | Medium (4) | 3.5.9 | Accept | Accepted | Day 6: bob.roberts actually had it on; deliberately turned off for bob.roberts and alice.wonderland to match. Onboarding procedure enforces it for real accounts |
 | R-011 | DNS relies on a single external forwarder (1.1.1.1) | Day 3 | 1 | 2 | Low (2) | 800-53 SC-22 | Accept | Accepted | Root hints are the fallback; optional second forwarder |
 | R-012 | Host memory at capacity: 85% in use, committed 17.4 of 19.9 GB with two VMs | Day 4 | 3 | 2 | **High (6)** | CSF PR.IR-04 | Mitigate | Open | Max two VMs at a time; upgrade to 2x16 GB DDR4-3200 SODIMM |
 | R-013 | Granting Remote Desktop rights to a standard user as a workaround for Enhanced Session | Day 4 | 1 | 2 | Low (2) | 3.1.5, 3.1.12 | Avoid | Closed | Used Basic Session instead |
 | R-014 | No DHCP, so every IP and DNS setting is manual; one wrong DNS entry breaks domain join | Day 4 | 2 | 1 | Low (2) | 3.4.2 | Mitigate | Open | DHCP on DC01 with DNS option 10.10.10.10 |
 | R-015 | Static, manually set local admin password on WS01; reused passwords enable lateral movement. Day 5: password forgotten with no way to look it up. | Day 4, 5 | 2 | 3 | **High (6)** | 3.5.10; CIS 5.2 | Mitigate | Open | Reset via domain admin, then deploy Windows LAPS |
 | R-016 | No MFA for privileged accounts | Review 10/14 | 2 | 3 | **High (6)** | 3.5.3; CIS 6.5 | Accept | Accepted | Isolated lab with no remote access; revisit with hybrid identity |
-| R-017 | Account lockout policy was threshold 0 (unlimited guesses) | Review 10/14 | 2 | 2 | Medium (4) | 3.1.8 | Mitigate | In progress | Day 5: set to 5 / 15 min / 15 min in Default Domain Policy and verified; end-to-end lockout test pending (blocked by R-021) |
-| R-018 | No centralized audit logging or alerting; privileged actions aren't reviewed | Review 10/14 | 3 | 2 | **High (6)** | 3.3.1, 3.3.2; CIS 8.2 | Mitigate | Open | Advanced audit policy via GPO; Wazuh after the RAM upgrade |
+| R-017 | Account lockout policy was threshold 0 (unlimited guesses) | Review 10/14 | 2 | 2 | Medium (4) | 3.1.8 | Mitigate | **Closed** | Set to 5 / 15 min / 15 min (Day 5); tested end to end with bob.roberts (Day 6) |
+| R-018 | No centralized audit logging or alerting; privileged actions aren't reviewed | Review 10/14 | 3 | 2 | **High (6)** | 3.3.1, 3.3.2; CIS 8.2 | Mitigate | Open | Advanced audit policy via GPO; Wazuh after the RAM upgrade. Day 6: DC01 outage went unnoticed for days; lockout events (4740) not monitored |
 | R-019 | Public GitHub repo could expose passwords, my home IP or employer details | Day 1 | 2 | 3 | **High (6)** | 3.1.22 | Mitigate | Mitigated | Pre-commit checklist below; no work data in the lab |
 | R-020 | Cached domain logons let previous users sign in when no DC is reachable; failed attempts against the cache don't count toward lockout | Day 5 | 2 | 2 | Medium (4) | 3.5.2, 3.1.8 | Accept | Accepted | Needed for offline laptops; review "number of previous logons to cache" via GPO later |
-| R-021 | DC01 unreachable from WS01 and the host on LDAP (389), so domain sign-ins fail, and nothing alerted me | Day 5 | 3 | 2 | **High (6)** | 800-53 SI-4; CSF DE.CM | Mitigate | Open | Check DC01 services, local port 389, outbound connectivity and firewall |
+| R-021 | DC01 unreachable from WS01 and the host on LDAP (389), so domain sign-ins fail, and nothing alerted me | Day 5 | 3 | 2 | **High (6)** | 800-53 SI-4; CSF DE.CM | Mitigate | **Closed** | Day 6: stuck virtual network adapter on DC01; fixed with `Restart-NetAdapter`. Prevention tracked as R-022 |
+| R-022 | Laptop sleep or hibernate with VMs running can leave virtual network adapters stuck, silently cutting off the DC | Day 6 | 2 | 2 | Medium (4) | CSF PR.IR-03 | Mitigate | Mitigated | Procedural: shut down or save VMs before the laptop sleeps |
+| R-023 | Whoever controls the Hyper-V host controls DC01 (console, PowerShell Direct, virtual disks); the host is an everyday laptop | Day 6 | 2 | 3 | **High (6)** | 3.1.5; 800-53 AC-6 | Accept | Accepted | Acceptable for a personal lab; in production, a host running DCs is a Tier 0 asset with admin-only access |
 
 ## Pre-commit checklist (R-019)
 
@@ -78,3 +80,4 @@ Before every push to GitHub:
 |---|---|
 | 2026-10-14 | Register created from Day 1–4 logs; R-016, R-017, R-018 added during review |
 | 2026-10-19 | Day 5: added R-020, R-021; R-002 raised to 9; R-017 in progress; notes on R-008, R-015 |
+| 2026-10-22 | Day 6: closed R-017, R-021; added R-022, R-023; corrected R-010; note on R-018 |
